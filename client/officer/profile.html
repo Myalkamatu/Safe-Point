@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Safe Point</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="dashboard">
+    <aside class="sidebar"></aside>
+    <main class="main-content">
+      <div class="page-header"><h2>Profile</h2></div>
+      <div class="page-body">
+        <div class="card profile-card">
+          <div class="card-body">
+            <div class="profile-avatar" id="profileAvatar">U</div>
+            <div class="report-detail">
+              <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value" id="pName">-</span></div>
+              <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value" id="pPhone">-</span></div>
+              <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value" id="pEmail">-</span></div>
+              <div class="detail-row"><span class="detail-label">Role</span><span class="detail-value" id="pRole">-</span></div>
+              <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="pDuty">-</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!Auth.requireRole('officer')) throw '';
+    buildSidebar('officer', 'Profile');
+
+    const loadProfile = async () => {
+      try {
+        const data = await api('/api/auth/me');
+        const u = data.user;
+        document.getElementById('profileAvatar').textContent = u.name.charAt(0).toUpperCase();
+        document.getElementById('pName').textContent = u.name;
+        document.getElementById('pPhone').textContent = u.phone;
+        document.getElementById('pEmail').textContent = u.email || 'Not set';
+        document.getElementById('pRole').textContent = 'Patrol Officer';
+        document.getElementById('pDuty').innerHTML = u.onDuty ? '<span class="duty-on">ON DUTY</span>' : '<span class="duty-off">OFF DUTY</span>';
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+    loadProfile();
+  </script>
+</body>
+</html>

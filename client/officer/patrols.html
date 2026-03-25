@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patrols - Safe Point</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="dashboard">
+    <aside class="sidebar"></aside>
+    <main class="main-content">
+      <div class="page-header"><h2>Patrol Status</h2></div>
+      <div class="page-body">
+        <div class="card" style="max-width:500px;">
+          <div class="card-header"><h3>Duty Status</h3></div>
+          <div class="card-body">
+            <p class="text-sm text-gray" style="margin-bottom:1rem;">Toggle your duty status to receive new report assignments. Your location will be updated when you go on duty.</p>
+            <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+              <span class="text-sm">Current Status:</span>
+              <span id="dutyBadge" class="duty-off">OFF DUTY</span>
+            </div>
+            <button class="btn btn-red" id="toggleBtn" onclick="toggleDuty()">Go On Duty</button>
+            <p class="text-sm text-gray" style="margin-top:1rem;" id="locationInfo"></p>
+          </div>
+        </div>
+
+        <div class="card" style="max-width:500px;margin-top:1.5rem;">
+          <div class="card-header"><h3>Assigned Agency</h3></div>
+          <div class="card-body">
+            <p class="text-sm" id="agencyName">Not assigned</p>
+            <p class="text-xs text-gray" style="margin-top:0.25rem;">Contact your super officer to change your agency assignment.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!Auth.requireRole('officer')) throw '';
+    buildSidebar('officer', 'Patrols');
+
+    let currentUser = null;
+
+    const loadProfile = async () => {
+      try {
+        const data = await api('/api/auth/me');
+        currentUser = data.user;
+        updateUI();
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+
+    const updateUI = () => {
+      const badge = document.getElementById('dutyBadge');
+      const btn = document.getElementById('toggleBtn');
+      if (currentUser.onDuty) {
+        badge.className = 'duty-on';
+        badge.textContent = 'ON DUTY';
+        btn.textContent = 'Go Off Duty';
+        btn.className = 'btn btn-dark';
+      } else {
+        badge.className = 'duty-off';
+        badge.textContent = 'OFF DUTY';
+        btn.textContent = 'Go On Duty';
+        btn.className = 'btn btn-red';
+      }
+      if (currentUser.assignedAgency) {
+        document.getElementById('agencyName').textContent = typeof currentUser.assignedAgency === 'object' ? currentUser.assignedAgency.name : 'Assigned';
+      }
+    };
+
+    const toggleDuty = async () => {
+      try {
+        let lat = 0, lng = 0;
+        if (!currentUser.onDuty && navigator.geolocation) {
+          const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+          }).catch(() => null);
+          if (pos) {
+            lat = pos.coords.latitude;
+            lng = pos.coords.longitude;
+          }
+        }
+
+        const data = await api(`/api/officers/${currentUser._id}/duty`, {
+          method: 'PUT',
+          body: { lat, lng }
+        });
+        currentUser = { ...currentUser, onDuty: data.officer.onDuty };
+        updateUI();
+
+        if (lat && lng) {
+          document.getElementById('locationInfo').textContent = `Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        }
+        showToast(data.officer.onDuty ? 'You are now on duty' : 'You are now off duty', 'success');
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+
+    loadProfile();
+  </script>
+</body>
+</html>

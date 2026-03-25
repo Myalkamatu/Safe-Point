@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Officers - Safe Point</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="dashboard">
+    <aside class="sidebar"></aside>
+    <main class="main-content">
+      <div class="page-header">
+        <h2>Manage Officers</h2>
+        <button class="btn btn-red btn-sm" onclick="document.getElementById('addModal').classList.add('active')">+ Add Officer</button>
+      </div>
+      <div class="page-body">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Officers</div>
+            <div class="stat-value" id="totalOfficers">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">On Duty</div>
+            <div class="stat-value" id="onDuty">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Off Duty</div>
+            <div class="stat-value" id="offDuty">0</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><h3>Officers List</h3></div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Role</th>
+                  <th>Agency</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="officerTable">
+                <tr><td colspan="6" class="loading">Loading officers...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add Officer Modal -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Add New Officer</h3>
+        <button class="modal-close" onclick="document.getElementById('addModal').classList.remove('active')">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="addOfficerForm">
+          <div class="form-group">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" class="form-control" placeholder="Officer's full name" required>
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" class="form-control" placeholder="Phone number" required>
+          </div>
+          <div class="form-group">
+            <label for="email">Email <span class="text-gray">(optional)</span></label>
+            <input type="email" id="email" class="form-control" placeholder="Email address">
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" class="form-control" placeholder="Create password" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label for="role">Role</label>
+            <select id="role" class="form-control">
+              <option value="officer">Patrol Officer</option>
+              <option value="super">Super Officer</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-red btn-block">Create Officer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Agency Modal -->
+  <div class="modal-overlay" id="assignModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Assign Agency</h3>
+        <button class="modal-close" onclick="document.getElementById('assignModal').classList.remove('active')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="agencySelect">Select Agency</label>
+          <select id="agencySelect" class="form-control"></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('assignModal').classList.remove('active')">Cancel</button>
+        <button class="btn btn-red btn-sm" onclick="submitAssign()">Assign</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!Auth.requireRole('super')) throw '';
+    buildSidebar('super', 'Manage Officers');
+
+    let officers = [];
+    let agencies = [];
+    let assignOfficerId = null;
+
+    const loadOfficers = async () => {
+      try {
+        const data = await api('/api/officers');
+        officers = data.officers;
+        renderOfficers();
+        updateStats();
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+
+    const loadAgencies = async () => {
+      try {
+        const data = await api('/api/agencies');
+        agencies = data.agencies;
+        const select = document.getElementById('agencySelect');
+        select.innerHTML = '<option value="">No Agency</option>' + agencies.map(a => `<option value="${a._id}">${a.name}</option>`).join('');
+      } catch (err) {}
+    };
+
+    const renderOfficers = () => {
+      const tbody = document.getElementById('officerTable');
+      if (officers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><p>No officers found</p></div></td></tr>';
+        return;
+      }
+      tbody.innerHTML = officers.map(o => `
+        <tr>
+          <td>${o.name}</td>
+          <td>${o.phone}</td>
+          <td>${o.role === 'super' ? 'Super Officer' : 'Patrol Officer'}</td>
+          <td>${o.assignedAgency ? o.assignedAgency.name : '<span class="text-gray">None</span>'}</td>
+          <td>${o.onDuty ? '<span class="duty-on">ON DUTY</span>' : '<span class="duty-off">OFF DUTY</span>'}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="openAssign('${o._id}')" style="margin-right:0.25rem;">Assign</button>
+            <button class="btn btn-sm ${o.onDuty ? 'btn-dark' : 'btn-red'}" onclick="toggleDuty('${o._id}')">${o.onDuty ? 'Off Duty' : 'On Duty'}</button>
+          </td>
+        </tr>
+      `).join('');
+    };
+
+    const updateStats = () => {
+      document.getElementById('totalOfficers').textContent = officers.length;
+      document.getElementById('onDuty').textContent = officers.filter(o => o.onDuty).length;
+      document.getElementById('offDuty').textContent = officers.filter(o => !o.onDuty).length;
+    };
+
+    const toggleDuty = async (id) => {
+      try {
+        await api(`/api/officers/${id}/duty`, { method: 'PUT', body: {} });
+        loadOfficers();
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+
+    const openAssign = (id) => {
+      assignOfficerId = id;
+      document.getElementById('assignModal').classList.add('active');
+    };
+
+    const submitAssign = async () => {
+      try {
+        await api(`/api/officers/${assignOfficerId}/assign`, {
+          method: 'PUT',
+          body: { agencyId: document.getElementById('agencySelect').value || null }
+        });
+        document.getElementById('assignModal').classList.remove('active');
+        showToast('Agency assigned', 'success');
+        loadOfficers();
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+
+    document.getElementById('addOfficerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await api('/api/officers', {
+          method: 'POST',
+          body: {
+            name: document.getElementById('name').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value,
+            role: document.getElementById('role').value
+          }
+        });
+        document.getElementById('addModal').classList.remove('active');
+        document.getElementById('addOfficerForm').reset();
+        showToast('Officer created', 'success');
+        loadOfficers();
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    loadOfficers();
+    loadAgencies();
+  </script>
+</body>
+</html>

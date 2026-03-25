@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Safe Point</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="dashboard">
+    <aside class="sidebar"></aside>
+    <main class="main-content">
+      <div class="page-header"><h2>Profile</h2></div>
+      <div class="page-body">
+        <div class="card profile-card">
+          <div class="card-body">
+            <div class="profile-avatar" id="profileAvatar">U</div>
+            <form id="profileForm">
+              <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" id="name" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" class="form-control">
+              </div>
+              <button type="submit" class="btn btn-red" id="saveBtn">Save Changes</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!Auth.requireRole('citizen')) throw '';
+    buildSidebar('citizen', 'Profile');
+
+    const loadProfile = async () => {
+      try {
+        const data = await api('/api/auth/me');
+        const u = data.user;
+        document.getElementById('name').value = u.name;
+        document.getElementById('phone').value = u.phone;
+        document.getElementById('email').value = u.email || '';
+        document.getElementById('profileAvatar').textContent = u.name.charAt(0).toUpperCase();
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const data = await api('/api/auth/profile', {
+          method: 'PUT',
+          body: {
+            name: document.getElementById('name').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            email: document.getElementById('email').value.trim()
+          }
+        });
+        Auth.setAuth(Auth.getToken(), { ...Auth.getUser(), name: data.user.name, phone: data.user.phone, email: data.user.email });
+        showToast('Profile updated', 'success');
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>

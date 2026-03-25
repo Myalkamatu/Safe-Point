@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Dashboard - Safe Point</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="dashboard">
+    <aside class="sidebar"></aside>
+    <main class="main-content">
+      <div class="page-header">
+        <h2>Report Dashboard</h2>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-outline btn-sm" id="viewList" onclick="toggleView('list')">List</button>
+          <button class="btn btn-dark btn-sm" id="viewMap" onclick="toggleView('map')">Map</button>
+        </div>
+      </div>
+      <div class="alert-bar alert-bar-red" id="alertBar">🔔 <span id="alertText"></span></div>
+      <div class="page-body">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Assigned Reports</div>
+            <div class="stat-value" id="totalReports">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value" id="pendingReports">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Reviewing</div>
+            <div class="stat-value" id="reviewingReports">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Resolved</div>
+            <div class="stat-value" id="resolvedReports">0</div>
+          </div>
+        </div>
+
+        <!-- Map View -->
+        <div class="card" id="mapView" style="display:none;">
+          <div class="card-header"><h3>Reports Map</h3></div>
+          <div class="card-body" style="padding:0;">
+            <div class="map-container" id="map" style="height:500px;"></div>
+          </div>
+        </div>
+
+        <!-- List View -->
+        <div class="card" id="listView">
+          <div class="card-header"><h3>Reports</h3></div>
+          <div id="reportList" class="report-list">
+            <div class="loading">Loading reports...</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Report Detail Modal -->
+  <div class="modal-overlay" id="reportModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Report Details</h3>
+        <button class="modal-close" onclick="document.getElementById('reportModal').classList.remove('active')">✕</button>
+      </div>
+      <div class="modal-body" id="reportDetail"></div>
+      <div class="modal-footer" id="reportActions"></div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/map.js"></script>
+  <script src="/js/socket.js"></script>
+  <script src="/js/notification.js"></script>
+  <script>
+    if (!Auth.requireRole('officer')) throw '';
+    buildSidebar('officer', 'Report Dashboard');
+    initSocket();
+    initNotifications();
+
+    let reports = [];
+    let map = null;
+    let mapMarkers = [];
+
+    const loadReports = async () => {
+      try {
+        const data = await api('/api/reports');
+        reports = data.reports;
+        renderReports();
+        updateStats();
+        if (map) renderMapMarkers();
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+
+    const renderReports = () => {
+      const container = document.getElementById('reportList');
+      if (reports.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>No reports assigned to you yet.</p></div>';
+        return;
+      }
+      container.innerHTML = reports.map(r => `
+        <div class="report-item" onclick="showReport('${r._id}')">
+          <div class="report-icon">🚨</div>
+          <div class="report-info">
+            <div class="report-type">${r.crimeType}</div>
+            <div class="report-desc">${r.description}</div>
+          </div>
+          <div class="report-meta">
+            <div class="report-date">${formatDate(r.createdAt)}</div>
+            ${statusBadge(r.status)}
+          </div>
+        </div>
+      `).join('');
+    };
+
+    const updateStats = () => {
+      document.getElementById('totalReports').textContent = reports.length;
+      document.getElementById('pendingReports').textContent = reports.filter(r => r.status === 'pending').length;
+      document.getElementById('reviewingReports').textContent = reports.filter(r => r.status === 'reviewing').length;
+      document.getElementById('resolvedReports').textContent = reports.filter(r => r.status === 'resolved').length;
+    };
+
+    const toggleView = (view) => {
+      if (view === 'map') {
+        document.getElementById('mapView').style.display = 'block';
+        document.getElementById('listView').style.display = 'none';
+        document.getElementById('viewMap').className = 'btn btn-dark btn-sm';
+        document.getElementById('viewList').className = 'btn btn-outline btn-sm';
+        if (!map) {
+          map = MapHelper.create('map');
+          renderMapMarkers();
+        }
+        setTimeout(() => map.invalidateSize(), 100);
+      } else {
+        document.getElementById('mapView').style.display = 'none';
+        document.getElementById('listView').style.display = 'block';
+        document.getElementById('viewList').className = 'btn btn-dark btn-sm';
+        document.getElementById('viewMap').className = 'btn btn-outline btn-sm';
+      }
+    };
+
+    const renderMapMarkers = () => {
+      mapMarkers.forEach(m => map.removeLayer(m));
+      mapMarkers = [];
+      reports.forEach(r => {
+        if (r.location && r.location.lat) {
+          const m = MapHelper.addMarker(
+            map, r.location.lat, r.location.lng,
+            `<b>${r.crimeType}</b><br>${r.description.substring(0, 60)}...<br><small>${formatDate(r.createdAt)}</small>`,
+            r.status === 'resolved' ? 'green' : 'red'
+          );
+          m.on('click', () => showReport(r._id));
+          mapMarkers.push(m);
+        }
+      });
+      if (mapMarkers.length > 0) MapHelper.fitMarkers(map, mapMarkers);
+    };
+
+    const showReport = async (id) => {
+      try {
+        const data = await api(`/api/reports/${id}`);
+        const r = data.report;
+        document.getElementById('reportDetail').innerHTML = `
+          <div class="report-detail">
+            <div class="detail-row"><span class="detail-label">Crime Type</span><span class="detail-value">${r.crimeType}</span></div>
+            <div class="detail-row"><span class="detail-label">Description</span><span class="detail-value">${r.description}</span></div>
+            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">${statusBadge(r.status)}</span></div>
+            <div class="detail-row"><span class="detail-label">Citizen</span><span class="detail-value">${r.citizen ? r.citizen.name : 'N/A'} (${r.citizen ? r.citizen.phone : ''})</span></div>
+            <div class="detail-row"><span class="detail-label">Location</span><span class="detail-value">${r.location.address || `${r.location.lat.toFixed(4)}, ${r.location.lng.toFixed(4)}`}</span></div>
+            <div class="detail-row"><span class="detail-label">Date</span><span class="detail-value">${formatDate(r.createdAt)}</span></div>
+            ${r.image ? `<div class="report-image"><img src="${r.image}" alt="Evidence"></div>` : ''}
+          </div>
+        `;
+        document.getElementById('reportActions').innerHTML = r.status !== 'resolved' ? `
+          ${r.status === 'pending' ? `<button class="btn btn-dark btn-sm" onclick="updateStatus('${r._id}', 'reviewing')">Mark Reviewing</button>` : ''}
+          <button class="btn btn-red btn-sm" onclick="updateStatus('${r._id}', 'resolved')">Mark Resolved</button>
+        ` : '<span class="text-sm text-gray">This report has been resolved</span>';
+        document.getElementById('reportModal').classList.add('active');
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+
+    const updateStatus = async (id, status) => {
+      try {
+        await api(`/api/reports/${id}/status`, { method: 'PUT', body: { status } });
+        showToast('Status updated', 'success');
+        document.getElementById('reportModal').classList.remove('active');
+        loadReports();
+      } catch (err) {
+        showToast(err.message);
+      }
+    };
+
+    function onNewReport(data) {
+      showBrowserNotification('New Crime Report', `${data.report.crimeType} reported nearby`);
+      const bar = document.getElementById('alertBar');
+      document.getElementById('alertText').textContent = `New report: ${data.report.crimeType}`;
+      bar.classList.add('active');
+      setTimeout(() => bar.classList.remove('active'), 8000);
+      loadReports();
+    }
+
+    loadReports();
+  </script>
+</body>
+</html>

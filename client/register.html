@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Safe Point</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-brand">
+      <div class="brand-logo">SAFE POINT</div>
+      <h1>Precision<br>Protection<br>For Everyone</h1>
+      <p>Join Safe Point and help make your community safer through real-time incident reporting.</p>
+      <svg class="brand-image" viewBox="0 0 300 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="150" cy="120" r="50" fill="#3F3F46"/>
+        <path d="M80 250 C80 200 220 200 220 250 L220 400 L80 400 Z" fill="#3F3F46"/>
+        <rect x="120" y="180" width="60" height="8" rx="4" fill="#BC0100"/>
+      </svg>
+    </div>
+    <div class="auth-form-side">
+      <form class="auth-form" id="registerForm">
+        <h2>Create Account</h2>
+        <p class="subtitle">Register as a citizen to start reporting</p>
+
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" class="form-control" placeholder="Enter your full name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" class="form-control" placeholder="Enter phone number" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email <span class="text-gray">(optional)</span></label>
+          <input type="email" id="email" class="form-control" placeholder="Enter email address">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="Create a password" required minlength="6">
+        </div>
+
+        <button type="submit" class="btn btn-red btn-block" id="registerBtn">Create Account</button>
+
+        <div class="auth-footer">
+          Already have an account? <a href="/login.html" class="link">Login</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('registerBtn');
+      btn.textContent = 'Creating Account...';
+      btn.disabled = true;
+
+      try {
+        const data = await api('/api/auth/register', {
+          method: 'POST',
+          body: {
+            name: document.getElementById('name').value.trim(),
+            phone: document.getElementById('phone').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value
+          }
+        });
+
+        Auth.setAuth(data.token, data.user);
+        window.location.href = '/citizen/dashboard.html';
+      } catch (err) {
+        showToast(err.message);
+        btn.textContent = 'Create Account';
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

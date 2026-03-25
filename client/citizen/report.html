@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Send Report - Safe Point</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="dashboard">
+    <aside class="sidebar"></aside>
+    <main class="main-content">
+      <div class="page-header">
+        <h2>Crime Report Form</h2>
+      </div>
+      <div class="page-body">
+        <div class="card" style="max-width:700px;">
+          <div class="card-header"><h3>Report an Incident</h3></div>
+          <div class="card-body">
+            <form id="reportForm">
+              <div class="form-group">
+                <label for="crimeType">Crime Type</label>
+                <select id="crimeType" class="form-control" required>
+                  <option value="">Select crime type</option>
+                  <option value="Theft">Theft</option>
+                  <option value="Robbery">Robbery</option>
+                  <option value="Assault">Assault</option>
+                  <option value="Burglary">Burglary</option>
+                  <option value="Vandalism">Vandalism</option>
+                  <option value="Fraud">Fraud</option>
+                  <option value="Kidnapping">Kidnapping</option>
+                  <option value="Domestic Violence">Domestic Violence</option>
+                  <option value="Drug Related">Drug Related</option>
+                  <option value="Suspicious Activity">Suspicious Activity</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="description">Crime Description</label>
+                <textarea id="description" class="form-control" placeholder="Describe the incident in detail..." required></textarea>
+              </div>
+
+              <div class="form-group">
+                <label>Image Evidence</label>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
+                  <div class="upload-icon">📷</div>
+                  <p>Click to upload an image</p>
+                </div>
+                <input type="file" id="imageInput" accept="image/*" style="display:none">
+                <div class="upload-preview" id="uploadPreview">
+                  <img id="previewImg" src="" alt="Preview">
+                  <button type="button" class="remove-btn" id="removeImg">✕</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Incident Location <span class="text-gray text-sm">(drag marker to adjust)</span></label>
+                <div class="map-container" id="map"></div>
+                <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+                  <input type="text" id="lat" class="form-control" placeholder="Latitude" readonly>
+                  <input type="text" id="lng" class="form-control" placeholder="Longitude" readonly>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="agency">Security Agency <span class="text-gray text-sm">(optional)</span></label>
+                <select id="agency" class="form-control">
+                  <option value="">Auto-detect nearest agency</option>
+                </select>
+              </div>
+
+              <button type="submit" class="btn btn-red btn-block" id="submitBtn">Submit Report</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/map.js"></script>
+  <script src="/js/socket.js"></script>
+  <script>
+    if (!Auth.requireRole('citizen')) throw '';
+    buildSidebar('citizen', 'Send Report');
+    initSocket();
+
+    let reportLat = 9.0579;
+    let reportLng = 7.4951;
+    let map, marker;
+
+    // Initialize map
+    const initMap = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            reportLat = pos.coords.latitude;
+            reportLng = pos.coords.longitude;
+            setupMap();
+          },
+          () => setupMap()
+        );
+      } else {
+        setupMap();
+      }
+    };
+
+    const setupMap = () => {
+      map = MapHelper.create('map', reportLat, reportLng, 15);
+      marker = MapHelper.addDraggableMarker(map, reportLat, reportLng, (lat, lng) => {
+        reportLat = lat;
+        reportLng = lng;
+        document.getElementById('lat').value = lat.toFixed(6);
+        document.getElementById('lng').value = lng.toFixed(6);
+      });
+      document.getElementById('lat').value = reportLat.toFixed(6);
+      document.getElementById('lng').value = reportLng.toFixed(6);
+    };
+
+    // Load agencies
+    const loadAgencies = async () => {
+      try {
+        const data = await api('/api/agencies');
+        const select = document.getElementById('agency');
+        data.agencies.forEach(a => {
+          const opt = document.createElement('option');
+          opt.value = a._id;
+          opt.textContent = a.name;
+          select.appendChild(opt);
+        });
+      } catch (err) {}
+    };
+
+    // Image upload
+    const imageInput = document.getElementById('imageInput');
+    const uploadArea = document.getElementById('uploadArea');
+    const uploadPreview = document.getElementById('uploadPreview');
+    const previewImg = document.getElementById('previewImg');
+
+    imageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        previewImg.src = ev.target.result;
+        uploadPreview.style.display = 'block';
+        uploadArea.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.getElementById('removeImg').addEventListener('click', () => {
+      imageInput.value = '';
+      previewImg.src = '';
+      uploadPreview.style.display = 'none';
+      uploadArea.style.display = 'block';
+    });
+
+    // Submit report
+    document.getElementById('reportForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = 'Submitting...';
+      btn.disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append('crimeType', document.getElementById('crimeType').value);
+        formData.append('description', document.getElementById('description').value);
+        formData.append('lat', reportLat);
+        formData.append('lng', reportLng);
+        formData.append('address', '');
+        formData.append('agencyId', document.getElementById('agency').value);
+
+        if (imageInput.files[0]) {
+          formData.append('image', imageInput.files[0]);
+        }
+
+        const res = await fetch('/api/reports', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${Auth.getToken()}` },
+          body: formData
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.message);
+
+        showToast('Report submitted successfully!', 'success');
+        setTimeout(() => window.location.href = '/citizen/dashboard.html', 1500);
+      } catch (err) {
+        showToast(err.message);
+        btn.textContent = 'Submit Report';
+        btn.disabled = false;
+      }
+    });
+
+    initMap();
+    loadAgencies();
+  </script>
+</body>
+</html>
