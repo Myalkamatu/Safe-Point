@@ -16,19 +16,21 @@
         <h2>Crime Report Form</h2>
       </div>
       <div class="page-body">
-        <div class="card" style="max-width:700px;">
-          <div class="card-header"><h3>Report an Incident</h3></div>
-          <div class="card-body">
-            <form id="reportForm">
+        <form id="reportForm" class="report-form-layout">
+          <div class="report-left">
+            <div class="report-card">
+              <div class="report-card-title"><span class="title-square"></span> INCIDENT PARTICULARS</div>
               <div class="form-group">
-                <label for="crimeType">Crime Type</label>
-                <select id="crimeType" class="form-control" required>
-                  <option value="">Select crime type</option>
+                <label class="sr-only">CRIME TYPE</label>
+                <select id="crimeType" class="form-control dispatch-select" required>
+                  <option value="">Select an incident type...</option>
                   <option value="Theft">Theft</option>
                   <option value="Robbery">Robbery</option>
                   <option value="Assault">Assault</option>
                   <option value="Burglary">Burglary</option>
                   <option value="Vandalism">Vandalism</option>
+                  <option value="Fire">Fire Breakout</option>
+                  <option value="Accident">Road Accident</option>
                   <option value="Fraud">Fraud</option>
                   <option value="Kidnapping">Kidnapping</option>
                   <option value="Domestic Violence">Domestic Violence</option>
@@ -37,45 +39,110 @@
                   <option value="Other">Other</option>
                 </select>
               </div>
-
-              <div class="form-group">
-                <label for="description">Crime Description</label>
-                <textarea id="description" class="form-control" placeholder="Describe the incident in detail..." required></textarea>
+              <div class="form-group" style="margin-top: 1rem;">
+                <label class="sr-only">CRIME DESCRIPTION</label>
+                <textarea id="description" class="form-control dispatch-textarea" placeholder="Describe what happened in detail..." required></textarea>
               </div>
+            </div>
 
+            <div class="report-card">
+              <div class="report-card-title"><span class="title-square"></span> LOCATION</div>
               <div class="form-group">
-                <label>Image Evidence</label>
-                <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
-                  <div class="upload-icon">📷</div>
-                  <p>Click to upload an image</p>
-                </div>
-                <input type="file" id="imageInput" accept="image/*" style="display:none">
-                <div class="upload-preview" id="uploadPreview">
-                  <img id="previewImg" src="" alt="Preview">
-                  <button type="button" class="remove-btn" id="removeImg">✕</button>
-                </div>
+                <input type="text" id="address" class="form-control dispatch-input" placeholder="Enter street address or landmarks..." required>
               </div>
+              <!-- Hidden lat/lng filled by map.js internally, keeping fields for compatibility -->
+              <input type="hidden" id="lat">
+              <input type="hidden" id="lng">
+            </div>
 
-              <div class="form-group">
-                <label>Incident Location <span class="text-gray text-sm">(drag marker to adjust)</span></label>
-                <div class="map-container" id="map"></div>
-                <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
-                  <input type="text" id="lat" class="form-control" placeholder="Latitude" readonly>
-                  <input type="text" id="lng" class="form-control" placeholder="Longitude" readonly>
-                </div>
+            <div class="report-card">
+              <div class="report-card-title"><span class="title-square"></span> MEDIA EVIDENCE</div>
+              <div class="upload-area stylish-upload" id="uploadArea" onclick="document.getElementById('imageInput').click()">
+                <div class="upload-icon"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+                <div style="font-weight: 800; font-size: 0.8125rem; letter-spacing: 0.05em; margin-bottom: 0.25rem;">UPLOAD IMAGES</div>
+                <p>Drag and drop or click to browse</p>
               </div>
-
-              <div class="form-group">
-                <label for="agency">Security Agency <span class="text-gray text-sm">(optional)</span></label>
-                <select id="agency" class="form-control">
-                  <option value="">Auto-detect nearest agency</option>
-                </select>
+              <input type="file" id="imageInput" accept="image/*" style="display:none">
+              <div class="upload-preview" id="uploadPreview">
+                <img id="previewImg" src="" alt="Preview">
+                <button type="button" class="remove-btn" id="removeImg"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
               </div>
-
-              <button type="submit" class="btn btn-red btn-block" id="submitBtn">Submit Report</button>
-            </form>
+            </div>
           </div>
-        </div>
+
+          <div class="report-right">
+            <div class="report-card dispatch-panel">
+              <div class="report-card-title"><span class="title-square"></span> SECURITY DISPATCH</div>
+              
+              <label class="dispatch-card">
+                <div class="dispatch-icon type-fire"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c0 0-5 5-5 11c0 2 1.5 4 3 6c1 1.5 3 2 5 2s4-.5 5-2c1.5-2 3-4 3-6c0-6-5-11-5-11z"/><path d="M12 22c1-2 1-4 0-6"/></svg></div>
+                <div class="dispatch-info">
+                  <div class="dispatch-name">Fire Services</div>
+                  <div class="dispatch-desc">EMERGENCY RESCUE</div>
+                </div>
+                <div class="dispatch-check">
+                  <input type="checkbox" name="dispatchTypes" value="fire">
+                  <span class="custom-checkbox"></span>
+                </div>
+              </label>
+
+              <label class="dispatch-card">
+                <div class="dispatch-icon type-police"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8l1.2 3.6 3.8.3-3 2.5 1 3.6-3.2-2.1-3.2 2.1 1-3.6-3-2.5 3.8-.3L12 8z"/></svg></div>
+                <div class="dispatch-info">
+                  <div class="dispatch-name">Police</div>
+                  <div class="dispatch-desc">LAW ENFORCEMENT</div>
+                </div>
+                <div class="dispatch-check">
+                  <input type="checkbox" name="dispatchTypes" value="police">
+                  <span class="custom-checkbox"></span>
+                </div>
+              </label>
+
+              <label class="dispatch-card">
+                <div class="dispatch-icon type-civil"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+                <div class="dispatch-info">
+                  <div class="dispatch-name">Civil Defence</div>
+                  <div class="dispatch-desc">NATIONAL PROTECTION</div>
+                </div>
+                <div class="dispatch-check">
+                  <input type="checkbox" name="dispatchTypes" value="civil_defence">
+                  <span class="custom-checkbox"></span>
+                </div>
+              </label>
+
+              <label class="dispatch-card">
+                <div class="dispatch-icon type-road"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2" ry="2"/><circle cx="12" cy="7" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="17" r="2"/></svg></div>
+                <div class="dispatch-info">
+                  <div class="dispatch-name">Road Safety</div>
+                  <div class="dispatch-desc">TRAFFIC CONTROL</div>
+                </div>
+                <div class="dispatch-check">
+                  <input type="checkbox" name="dispatchTypes" value="road_safety">
+                  <span class="custom-checkbox"></span>
+                </div>
+              </label>
+
+              <label class="dispatch-card">
+                <div class="dispatch-icon type-vigilante"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <div class="dispatch-info">
+                  <div class="dispatch-name">Vigilante Group</div>
+                  <div class="dispatch-desc">COMMUNITY WATCH</div>
+                </div>
+                <div class="dispatch-check">
+                  <input type="checkbox" name="dispatchTypes" value="vigilante">
+                  <span class="custom-checkbox"></span>
+                </div>
+              </label>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; align-items: flex-start; gap: 0.75rem; font-size: 0.6875rem; color: var(--gray);">
+              <input type="checkbox" id="confirm" required style="margin-top: 0.25rem;">
+              <label for="confirm" style="line-height: 1.4;">I confirm that all information provided is accurate. False reporting is a punishable offense under security protocol.</label>
+            </div>
+
+            <button type="submit" class="btn btn-red btn-block" id="submitBtn" style="margin-top: 1.5rem; padding: 1rem; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">SEND REPORT →</button>
+          </div>
+        </form>
       </div>
     </main>
   </div>
@@ -94,47 +161,73 @@
     let reportLng = 7.4951;
     let map, marker;
 
-    // Initialize map
+    // The map is removed from UI but we keep lat/lng coordinates to track location silently.
     const initMap = () => {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (pos) => {
+          async (pos) => {
             reportLat = pos.coords.latitude;
             reportLng = pos.coords.longitude;
-            setupMap();
+            document.getElementById('lat').value = reportLat.toFixed(6);
+            document.getElementById('lng').value = reportLng.toFixed(6);
+            
+            // Reverse Geocoding
+            try {
+              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${reportLat}&lon=${reportLng}`);
+              const data = await res.json();
+              if (data && data.display_name) {
+                // Only populate if empty to not overwrite user edits if it's slow
+                if (!document.getElementById('address').value) {
+                  document.getElementById('address').value = data.display_name;
+                }
+              }
+            } catch(e) {}
           },
-          () => setupMap()
+          () => {}
         );
-      } else {
-        setupMap();
       }
     };
 
-    const setupMap = () => {
-      map = MapHelper.create('map', reportLat, reportLng, 15);
-      marker = MapHelper.addDraggableMarker(map, reportLat, reportLng, (lat, lng) => {
-        reportLat = lat;
-        reportLng = lng;
-        document.getElementById('lat').value = lat.toFixed(6);
-        document.getElementById('lng').value = lng.toFixed(6);
-      });
-      document.getElementById('lat').value = reportLat.toFixed(6);
-      document.getElementById('lng').value = reportLng.toFixed(6);
+    // Auto check logic
+    const dispatchRules = {
+      'Theft': ['police', 'civil_defence', 'vigilante'],
+      'Robbery': ['police', 'civil_defence', 'vigilante'],
+      'Assault': ['police', 'civil_defence'],
+      'Burglary': ['police', 'vigilante'],
+      'Vandalism': ['police', 'vigilante'],
+      'Fire': ['fire', 'civil_defence', 'police'],
+      'Accident': ['road_safety', 'police', 'fire'],
+      'Fraud': ['police'],
+      'Kidnapping': ['police', 'civil_defence', 'vigilante'],
+      'Domestic Violence': ['police'],
+      'Drug Related': ['police'],
+      'Suspicious Activity': ['police', 'vigilante'],
+      'Other': ['police']
     };
 
-    // Load agencies
-    const loadAgencies = async () => {
-      try {
-        const data = await api('/api/agencies');
-        const select = document.getElementById('agency');
-        data.agencies.forEach(a => {
-          const opt = document.createElement('option');
-          opt.value = a._id;
-          opt.textContent = a.name;
-          select.appendChild(opt);
-        });
-      } catch (err) {}
-    };
+    document.getElementById('crimeType').addEventListener('change', (e) => {
+      const type = e.target.value;
+      const defaults = dispatchRules[type] || ['police'];
+      
+      document.querySelectorAll('input[name="dispatchTypes"]').forEach(cb => {
+        cb.checked = defaults.includes(cb.value);
+        if (cb.checked) {
+          cb.closest('.dispatch-card').classList.add('active');
+        } else {
+          cb.closest('.dispatch-card').classList.remove('active');
+        }
+      });
+    });
+
+    document.querySelectorAll('.dispatch-card input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          e.target.closest('.dispatch-card').classList.add('active');
+        } else {
+          e.target.closest('.dispatch-card').classList.remove('active');
+        }
+      });
+    });
 
     // Image upload
     const imageInput = document.getElementById('imageInput');
@@ -164,8 +257,15 @@
     // Submit report
     document.getElementById('reportForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      const dispatchTypes = Array.from(document.querySelectorAll('input[name="dispatchTypes"]:checked')).map(cb => cb.value);
+      if (dispatchTypes.length === 0) {
+        showToast('Please select at least one security dispatch category.');
+        return;
+      }
+
       const btn = document.getElementById('submitBtn');
-      btn.textContent = 'Submitting...';
+      btn.textContent = 'SUBMITTING...';
       btn.disabled = true;
 
       try {
@@ -174,8 +274,8 @@
         formData.append('description', document.getElementById('description').value);
         formData.append('lat', reportLat);
         formData.append('lng', reportLng);
-        formData.append('address', '');
-        formData.append('agencyId', document.getElementById('agency').value);
+        formData.append('address', document.getElementById('address').value);
+        formData.append('dispatchTypes', JSON.stringify(dispatchTypes));
 
         if (imageInput.files[0]) {
           formData.append('image', imageInput.files[0]);
@@ -193,13 +293,12 @@
         setTimeout(() => window.location.href = '/citizen/dashboard.html', 1500);
       } catch (err) {
         showToast(err.message);
-        btn.textContent = 'Submit Report';
+        btn.textContent = 'SEND REPORT →';
         btn.disabled = false;
       }
     });
 
     initMap();
-    loadAgencies();
   </script>
 </body>
 </html>

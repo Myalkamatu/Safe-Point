@@ -1,0 +1,6 @@
+name,phone,type,lat,lng,createdAt
+"City Fire Services","08098765432","fire",9.065,7.51,"Mon Mar 30 2026 23:33:21 GMT+0100 (West Africa Standard Time)"
+"Central Police Station","08012345678","police",9.0579,7.4951,"Mon Mar 30 2026 23:33:21 GMT+0100 (West Africa Standard Time)"
+"National Civil Defence Corps","08055566677","civil_defence",9.05,7.48,"Mon Mar 30 2026 23:33:21 GMT+0100 (West Africa Standard Time)"
+"Road Safety Commission","08044455566","road_safety",9.06,7.495,"Mon Mar 30 2026 23:33:21 GMT+0100 (West Africa Standard Time)"
+"Community Vigilante Group","08033322211","vigilante",9.052,7.49,"Mon Mar 30 2026 23:33:21 GMT+0100 (West Africa Standard Time)"

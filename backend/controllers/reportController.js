@@ -7,8 +7,23 @@ const webpush = require('web-push');
 
 exports.createReport = async (req, res) => {
   try {
-    const { crimeType, description, lat, lng, address, agencyId } = req.body;
+    const { crimeType, description, lat, lng, address, dispatchTypes } = req.body;
     const image = req.file ? `/uploads/${req.file.filename}` : '';
+
+    const allAgencies = await Agency.find();
+    const targetAgencies = [];
+    let parsedTypes = [];
+    try {
+      parsedTypes = typeof dispatchTypes === 'string' ? JSON.parse(dispatchTypes) : (dispatchTypes || []);
+    } catch(e) { parsedTypes = []; }
+
+    for (const type of parsedTypes) {
+      const validAgencies = allAgencies.filter(a => a.type === type);
+      if (validAgencies.length > 0) {
+        const nearest = findNearest(validAgencies, parseFloat(lat), parseFloat(lng), 1);
+        if (nearest.length > 0) targetAgencies.push(nearest[0]._id);
+      }
+    }
 
     const report = await Report.create({
       citizen: req.user._id,
@@ -16,12 +31,11 @@ exports.createReport = async (req, res) => {
       description,
       image,
       location: { lat: parseFloat(lat), lng: parseFloat(lng), address },
-      agency: agencyId || null
+      agencies: targetAgencies
     });
 
-    // Find nearest agencies
-    const agencies = await Agency.find();
-    const nearestAgencies = findNearest(agencies, parseFloat(lat), parseFloat(lng), 3);
+    // Find nearest agencies (for emit fallback)
+    const nearestAgencies = findNearest(allAgencies, parseFloat(lat), parseFloat(lng), 3);
 
     // Find nearest on-duty officers
     const officers = await User.find({
@@ -40,7 +54,7 @@ exports.createReport = async (req, res) => {
     // Populate the report for emitting
     const populated = await Report.findById(report._id)
       .populate('citizen', 'name phone')
-      .populate('agency', 'name')
+      .populate('agencies', 'name type')
       .populate('assignedOfficer', 'name phone');
 
     // Emit to all officers and super officers
@@ -83,14 +97,14 @@ exports.getReports = async (req, res) => {
     } else if (req.user.role === 'officer') {
       query.$or = [
         { assignedOfficer: req.user._id },
-        { agency: req.user.assignedAgency }
+        { agencies: req.user.assignedAgency }
       ];
     }
     // super sees all reports
 
     const reports = await Report.find(query)
       .populate('citizen', 'name phone')
-      .populate('agency', 'name')
+      .populate('agencies', 'name type')
       .populate('assignedOfficer', 'name phone')
       .sort({ createdAt: -1 });
 
@@ -104,7 +118,7 @@ exports.getReport = async (req, res) => {
   try {
     const report = await Report.findById(req.params.id)
       .populate('citizen', 'name phone')
-      .populate('agency', 'name location')
+      .populate('agencies', 'name type location')
       .populate('assignedOfficer', 'name phone');
 
     if (!report) return res.status(404).json({ message: 'Report not found' });
@@ -123,7 +137,7 @@ exports.updateStatus = async (req, res) => {
       { new: true }
     )
       .populate('citizen', 'name phone')
-      .populate('agency', 'name')
+      .populate('agencies', 'name type')
       .populate('assignedOfficer', 'name phone');
 
     if (!report) return res.status(404).json({ message: 'Report not found' });

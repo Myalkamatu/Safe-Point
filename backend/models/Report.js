@@ -10,7 +10,7 @@ const reportSchema = new mongoose.Schema({
     lng: { type: Number, required: true },
     address: { type: String, default: '' }
   },
-  agency: { type: mongoose.Schema.Types.ObjectId, ref: 'Agency', default: null },
+  agencies: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Agency' }],
   assignedOfficer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   status: { type: String, enum: ['pending', 'reviewing', 'resolved'], default: 'pending' },
   createdAt: { type: Date, default: Date.now }

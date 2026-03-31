@@ -1,0 +1,5 @@
+name,phone,email,role,onDuty,lat,lng,createdAt
+"Super Admin","0000000000","admin@safepoint.com","super",true,9.0579,7.4951,"Mon Mar 30 2026 23:33:20 GMT+0100 (West Africa Standard Time)"
+"Officer Alpha","1111111111","","officer",true,9.06,7.5,"Mon Mar 30 2026 23:33:20 GMT+0100 (West Africa Standard Time)"
+"Officer Bravo","2222222222","","officer",false,9.055,7.49,"Mon Mar 30 2026 23:33:20 GMT+0100 (West Africa Standard Time)"
+"om","09065218606","","citizen",false,0,0,"Tue Mar 31 2026 00:02:36 GMT+0100 (West Africa Standard Time)"

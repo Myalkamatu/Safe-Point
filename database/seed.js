@@ -52,16 +52,28 @@ const seed = async () => {
         location: { lat: 9.0579, lng: 7.4951 }
       },
       {
-        name: 'East Division Security',
+        name: 'City Fire Services',
         phone: '08098765432',
-        type: 'police',
+        type: 'fire',
         location: { lat: 9.0650, lng: 7.5100 }
       },
       {
-        name: 'West Guard Post',
+        name: 'National Civil Defence Corps',
         phone: '08055566677',
-        type: 'security',
+        type: 'civil_defence',
         location: { lat: 9.0500, lng: 7.4800 }
+      },
+      {
+        name: 'Road Safety Commission',
+        phone: '08044455566',
+        type: 'road_safety',
+        location: { lat: 9.0600, lng: 7.4950 }
+      },
+      {
+        name: 'Community Vigilante Group',
+        phone: '08033322211',
+        type: 'vigilante',
+        location: { lat: 9.0520, lng: 7.4900 }
       }
     ]);
 
